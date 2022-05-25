@@ -277,7 +277,7 @@ cd busybox-1.35.0
 
   
 
-> Enable **Build static binary (no shared libs)**
+> Enable **Settings > Build Options > Build static binary (no shared libs)**
 
   
 

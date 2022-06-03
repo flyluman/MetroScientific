@@ -12,7 +12,7 @@ Install necessary packages
 
 ````bash
 
-sudo apt install qemu-system-arm qemu-system-arm64 qemu-utils gcc-aarch64-linux-gnu build-essential lzop bison libncurses-dev git make gcc fakeroot ncurses-dev xz-utils libssl-dev bc flex libelf-dev
+sudo apt install qemu-system-arm qemu-system-aarch64 qemu-utils gcc-aarch64-linux-gnu build-essential lzop bison libncurses-dev git make gcc fakeroot ncurses-dev xz-utils libssl-dev bc flex libelf-dev
 
 ````
 

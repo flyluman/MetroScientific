@@ -85,46 +85,25 @@ make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
 
 ````
 
-  
-
-5. Open **.config** file
+5. Make **.config** compatible for virtual environment
 
   
 
 ````bash
 
-vim .config
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- kvmconfig
 
 ````
 
-  
-
-6. Enable NVME & PCIE
-> Search for the CONFIGS and make similar shown below. If any entry is not present, add that at the last of the file
+6. Enable All NVME configs
 
   
 
 ````bash
 
-vim .config
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- menuconfig
 
 ````
-
-  
-
-- CONFIG_CONFIGFS_FS=y
-
-- CONFIG_NVME_CORE=y
-
-- CONFIG_BLK_DEV_NVME=y
-
-- CONFIG_NVME_TARGET=y
-
-- CONFIG_RTC_NVMEM=y
-
-- CONFIG_NVMEM=y
-
-- CONFIG_KGDB =y
 
   
 
@@ -134,7 +113,7 @@ vim .config
 
 ````bash
 
-yes "" | make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig -j$(nproc)
+yes "" | make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig
 
 ````
 
@@ -146,57 +125,9 @@ yes "" | make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig -j$(nproc)
 
 ````bash
 
-make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image -j$(nproc)
 
 ````
-
-> ^-^
-
-  
-
-> Compilation will stop after a few seconds. Do rest of the works.
-
-  
-
-> ^-^
-
-  
-
-9. Open **scripts/dtc/dtc-lexer.lex.c**
-
-  
-
-````bash
-
-vim scripts/dtc/dtc-lexer.lex.c
-
-````
-
-  
-
-10. Search for **yylloc** & delete this line, save file, exit
-
-````bash
-
-YYLTYPE yylloc;
-
-````
-
-  
-
-11. Start the compile process again
-
-  
-
-````bash
-
-make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
-
-````
-
-  
-
-> ^~^
 
   
 
@@ -208,7 +139,7 @@ make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
 
   
 
-12. Issue this command to check it
+9. Issue this command to check it
 
   
 
@@ -220,7 +151,7 @@ ls -lah arch/arm64/boot/Image
 
   
 
-13. Back to the parent directory
+10. Back to the parent directory
 
   
 
@@ -333,17 +264,16 @@ cd rootfs
 
 ````bash
 
-mkdir -pv {bin,sbin,etc/init.d,proc,sys,usr/{bin,sbin}}
-
+mkdir -pv {bin,sbin,etc,proc,sys,usr/{bin,sbin}}
 ````
 
   
 
-9. Create **etc/init.d/rcS** file
+9. Create **init** file
 
 ````bash
 
-vim etc/init.d/rcS
+vim init
 
 ````
 
@@ -354,56 +284,32 @@ vim etc/init.d/rcS
 ````bash
 
 #!/bin/sh
+ 
+mount -t proc none /proc
+mount -t sysfs none /sys
 
-#This is the first script called by init process
-
-/bin/mount -a
-
-echo /sbin/mdev>/proc/sys/kernel/hotplug
-
+#Create device nodes
+mknod /dev/null c 1 3
+mknod /dev/tty c 5 0
 mdev -s
+ 
+echo -e "\nBoot took $(cut -d' ' -f1 /proc/uptime) seconds\n"
+ 
+exec /bin/sh
 
 ````
 
-11. Make **etc/init.d/rcS** exicutable
+11. Make **init** exicutable
 
 ````bash
 
-chmod a+x etc/init.d/rcS
+chmod a+x init
 
 ````
 
   
 
-12. Create **etc/fstab** file
-
-````bash
-
-vim etc/fstab
-
-````
-
-  
-
-13. Add following lines & save
-
-````bash
-
-#device mount-point type options dump fsck order
-
-proc /proc proc defaults 0 0
-
-tmpfs /tmp tmpfs defaults 0 0
-
-sysfs /sys sysfs defaults 0 0
-
-tmpfs /dev tmpfs defaults 0 0
-
-````
-
-  
-
-14. Build **rootfs.img**
+12. Build **rootfs.img**
 
 ````bash
 
@@ -413,7 +319,7 @@ find . -print0 | cpio --null -ov --format=newc | gzip -9 > ../../rootfs.img
 
   
 
-15. Back to the parent directory
+13. Back to the parent directory
 
   
 
@@ -441,13 +347,13 @@ cd ../../
 
   
 
-1. Create **nvme.img** of 4GB
+1. Create **nvme.img** of 512MB
 
   
 
 ````bash
 
-dd if=/dev/zero of=nvme.img bs=1M count=4096
+dd if=/dev/zero of=nvme.img bs=1M count=512
 
 ````
 
@@ -459,7 +365,7 @@ dd if=/dev/zero of=nvme.img bs=1M count=4096
 
 ````bash
 
-qemu-system-aarch64 -M virt -cpu cortex-a53 -smp 2 -m 4096M -kernel linux-4.19.18/arch/arm64/boot/Image -nographic -append "console=ttyAMA0 rdinit=linuxrc" -initrd rootfs.img
+qemu-system-aarch64 -M virt -cpu cortex-a53 -smp 2 -m 512M -kernel linux-4.19.18/arch/arm64/boot/Image -nographic -append "console=ttyAMA0 init=/init" -initrd rootfs.img
 
 ````
 
@@ -475,7 +381,7 @@ qemu-system-aarch64 -M virt -cpu cortex-a53 -smp 2 -m 4096M -kernel linux-4.19.1
 
 ````bash
 
-qemu-system-aarch64 -M virt -cpu cortex-a53 -smp 2 -m 4096M -kernel linux-4.19.18/arch/arm64/boot/Image -nographic -append "console=ttyAMA0 rdinit=linuxrc" -initrd rootfs.img -drive file=nvme.img,format=raw,if=none,id=nvme -device nvme,serial=deadbeef,drive=nvme
+qemu-system-aarch64 -M virt -cpu cortex-a53 -smp 2 -m 512M -kernel linux-4.19.18/arch/arm64/boot/Image -nographic -append "console=ttyAMA0 init=/init" -initrd rootfs.img -drive file=nvme.img,format=raw,if=none,id=nvme -device nvme,serial=deadbeef,drive=nvme
 
 ````
 
